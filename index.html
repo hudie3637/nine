@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>九衡居</title>
+    <!-- 修复后的 Content Security Policy (CSP) 配置 -->
+    <!-- 解决了字体 data: 协议加载、preload 资源加载等问题 -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      font-src 'self' data: https://fonts.gstatic.com;
+      script-src 'self' 'unsafe-inline' https://js.stripe.com https://api.hcaptcha.com;
+      connect-src 'self' https://pvtqvasjbuihcrexfvho.supabase.co https://api.hcaptcha.com https://api.stripe.com;
+      img-src 'self' data: https://*;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+
+      object-src 'none';
+      base-uri 'self';
+    ">
+    <!-- 预加载字体资源（修复 preload 的 as 属性问题） -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" 
+      rel="stylesheet"
+    >
+    <!-- 可选：如果需要预加载字体文件，使用正确的 as 属性 -->
+    <!-- 
+    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2" as="font" type="font/woff2" crossorigin>
+    -->
+  </head>
+  <body>
+    <!-- 应用根容器 -->
+    <div id="root"></div>
+    <!-- 主应用脚本 -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "建筑风水 ",
+  "description": "建筑风水分析应用 - 基于豆包AI大模型的智能户型分析工具",
+  "requestFramePermissions": [],
+  "aiProvider": "doubao",
+  "modelName": "doubao-seed-2-0-mini-260215"
+}
+

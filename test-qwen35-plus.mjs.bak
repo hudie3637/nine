@@ -1,0 +1,136 @@
+#!/usr/bin/env node
+/**
+ * Qwen 3.5 Plus 模型测试脚本 (ES Module 版本)
+ * 用于验证 API 配置是否正确
+ */
+
+import fs from 'fs/promises';
+import path from 'path';
+
+// 读取环境变量
+async function loadEnv() {
+  try {
+    const envContent = await fs.readFile('.env.local', 'utf8');
+    const envVars = {};
+    envContent.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...value] = trimmed.split('=');
+        envVars[key] = value.join('=').replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+      }
+    });
+    return envVars;
+  } catch (error) {
+    console.warn('⚠️  .env.local 文件未找到，将使用 process.env');
+    return process.env;
+  }
+}
+
+// 测试 Qwen 3.5 Plus API 调用
+async function testQwenAPI() {
+  console.log('🔍 开始测试 Qwen 3.5 Plus API...');
+  
+  const env = await loadEnv();
+  const apiKey = env.VITE_QWEN_API_KEY || env.QWEN_API_KEY;
+  
+  if (!apiKey) {
+    console.error('❌ 错误：未找到 QWEN_API_KEY，请在 .env.local 中配置');
+    console.log('示例配置：VITE_QWEN_API_KEY=your_api_key_here');
+    return false;
+  }
+
+  console.log('✅ 找到 API 密钥，开始测试...');
+  
+  // 测试不同的 API 端点
+  const endpoints = [
+    {
+      name: 'text-generation/generation',
+      url: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+      model: 'qwen3.5-plus'
+    },
+    {
+      name: 'v2/apps/qwen/qwen3.5-plus/completions',
+      url: 'https://dashscope.aliyuncs.com/api/v2/apps/qwen/qwen3.5-plus/completions',
+      model: 'qwen3.5-plus'
+    }
+  ];
+
+  for (const endpoint of endpoints) {
+    console.log(`\n🧪 测试端点: ${endpoint.name}`);
+    
+    try {
+      const response = await fetch(endpoint.url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: endpoint.model,
+          input: {
+            messages: [{
+              role: 'user',
+              content: '请用一句话介绍你自己'
+            }]
+          },
+          parameters: {
+            temperature: 0.7,
+            top_p: 0.9,
+            max_tokens: 50
+          }
+        })
+      });
+
+      console.log(`状态码: ${response.status} ${response.statusText}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ 请求成功！');
+        console.log('响应数据:', JSON.stringify(data, null, 2).substring(0, 200) + '...');
+        
+        // 检查是否有输出内容
+        if (data.output?.choices?.[0]?.message?.content) {
+          console.log('🤖 AI 回答:', data.output.choices[0].message.content);
+        } else if (data.output?.text) {
+          console.log('🤖 AI 回答:', data.output.text);
+        }
+        
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('❌ 请求失败:', errorText);
+      }
+    } catch (error) {
+      console.error('❌ 网络错误:', error.message);
+    }
+  }
+
+  console.error('❌ 所有端点测试失败');
+  return false;
+}
+
+// 主函数
+async function main() {
+  console.log('🚀 Qwen 3.5 Plus 模型测试脚本');
+  console.log('====================================');
+  
+  try {
+    const success = await testQwenAPI();
+    
+    console.log('\n====================================');
+    if (success) {
+      console.log('🎉 测试成功！Qwen 3.5 Plus 配置正确');
+    } else {
+      console.log('❌ 测试失败！请检查以下事项：');
+      console.log('1. .env.local 中是否配置了正确的 QWEN_API_KEY');
+      console.log('2. API 密钥是否有调用权限')
+      console.log('3. 网络连接是否正常')
+      console.log('4. DashScope 控制台中模型是否已开通')
+    }
+  } catch (error) {
+    console.error('💥 测试过程中出现错误:', error.message);
+  }
+}
+
+// 运行测试
+await main();
