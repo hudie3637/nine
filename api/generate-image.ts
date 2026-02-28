@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const requestStartTime = Date.now();
   const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
-    || req.ip?.replace('::ffff:', '') 
+    || (req as any).ip?.replace('::ffff:', '') 
     || '127.0.0.1';
 
   try {
