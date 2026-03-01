@@ -1047,7 +1047,7 @@ const AppContent = () => {
             const confidence = err.confidence || 0;
                     
             let modalTitle = '图片识别提示';
-            let modalMessage = `📥 重新上传户型图'\n ${detail};  
+            let modalMessage = `📥 重新上传\n${detail}`;  
             let modalType: 'info' | 'warning' | 'error' = 'warning';
                     
             if (confidence < 40) {
