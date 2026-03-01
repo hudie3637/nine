@@ -151,7 +151,8 @@ async function callDoubaoImageAPI(description: string) {
 // 历史记录查询函数
 async function getAnalysisHistory(userId: string) {
   try {
-    const response = await fetch(`/api/analysis-history?userId=${userId}`, {
+    const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://fengshui-backend-4i5o.onrender.com';
+    const response = await fetch(`${apiBaseUrl}/analysis-history?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
