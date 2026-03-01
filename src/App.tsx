@@ -28,13 +28,15 @@ import {
   Utensils,
   Lock,
   Plus,
-  Crown
+  Crown,
+  Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import PaymentModal from './components/PaymentModal';
+import html2canvas from 'html2canvas-pro';
 
 // Utility for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -432,9 +434,48 @@ const SuggestionImage = ({ suggestion }: { suggestion: Suggestion }) => {
   );
 };
 
-const OptimizationTab = ({ report, currentUser, onUpgrade }: { report: AnalysisReport | null; currentUser: any; onUpgrade: () => void }) => {
+const OptimizationTab = ({ report, currentUser, onUpgrade, isAnalyzing, thinkingStep }: { report: AnalysisReport | null; currentUser: any; onUpgrade: () => void; isAnalyzing?: boolean; thinkingStep?: number }) => {
+  const thinkingSteps = [
+    "正在扫描户型轮廓...",
+    "识别空间功能分区...",
+    "测算九宫八卦方位...",
+    "分析五行能量流转...",
+    "评估环境心理动线...",
+    "生成深度优化建议..."
+  ];
   // 检查用户是否为会员
   const isPremiumUser = currentUser?.is_premium;
+  
+  // 如果正在分析中，显示加载状态
+  if (isAnalyzing !== undefined && isAnalyzing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-8">
+        <div className="relative">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+            className="w-32 h-32"
+          >
+            <BaguaIcon className="w-full h-full opacity-20" />
+          </motion.div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+        </div>
+        <div className="text-center space-y-2">
+          <motion.p 
+            key={thinkingStep || 0}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-primary font-serif font-bold text-lg"
+          >
+            {thinkingSteps[thinkingStep || 0]}
+          </motion.p>
+          <p className="text-xs text-stone-400">灵境筑居 AI 正在为您深度解析</p>
+        </div>
+      </div>
+    );
+  }
   
   // 如果没有分析报告，显示空状态
   if (!report) {
@@ -501,14 +542,7 @@ const OptimizationTab = ({ report, currentUser, onUpgrade }: { report: AnalysisR
                   }
                 </p>
                 
-
-                
-                <div className="flex items-center justify-between pt-2 border-t border-stone-50">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-3 h-3 text-accent" />
-                    <span className="text-[10px] font-bold text-stone-400">AI 智能推荐</span>
-                  </div>
-                  <div className="flex gap-1">
+                <div className="flex gap-1">
                     {[1, 2, 3].map(n => (
                       <div 
                         key={n} 
@@ -523,7 +557,6 @@ const OptimizationTab = ({ report, currentUser, onUpgrade }: { report: AnalysisR
                       </div>
                     ))}
                   </div>
-                </div>
               </div>
             </div>
           </div>
@@ -535,13 +568,13 @@ const OptimizationTab = ({ report, currentUser, onUpgrade }: { report: AnalysisR
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100"
+          className="bg-[var(--color-paper)] rounded-2xl p-6 border border-stone-200"
         >
           <div className="text-center space-y-3">
             <div className="flex justify-center">
               <div className="relative">
                 <div className="absolute inset-0 bg-amber-200 blur-lg rounded-full"></div>
-                <div className="relative bg-amber-500 text-white p-3 rounded-full">
+                <div className="relative bg-primary text-white p-3 rounded-full">
                   <Plus className="w-5 h-5" />
                 </div>
               </div>
@@ -552,10 +585,10 @@ const OptimizationTab = ({ report, currentUser, onUpgrade }: { report: AnalysisR
             </p>
             <button
               onClick={onUpgrade}
-              className="mt-4 w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg"
+              className="mt-4 w-full py-3 bg-primary text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-lg"
             >
               <Crown className="w-4 h-4" />
-              升级查看完整建议 - ¥4
+              升级查看完整建议  ¥4
             </button>
           </div>
         </motion.div>
@@ -585,7 +618,7 @@ const OptimizationTab = ({ report, currentUser, onUpgrade }: { report: AnalysisR
   );
 };
 
-const ProfileTab = ({ currentUser, onSelectReport }: { currentUser: any; onSelectReport: (report: AnalysisReport, image: string) => void }) => {
+const ProfileTab = ({ currentUser, onSelectReport, isAnalysisInProgress }: { currentUser: any; onSelectReport: (report: AnalysisReport, image: string) => void; isAnalysisInProgress?: boolean }) => {
   if (!currentUser) {
     return (
       <motion.div 
@@ -622,6 +655,19 @@ const ProfileTab = ({ currentUser, onSelectReport }: { currentUser: any; onSelec
       animate={{ opacity: 1, x: 0 }}
       className="space-y-8 pb-12"
     >
+      {/* 分析状态提示 */}
+      {isAnalysisInProgress && (
+        <div className="mx-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+            <div>
+              <p className="text-amber-800 font-medium">正在分析中</p>
+              <p className="text-amber-600 text-sm">历史记录查看功能暂时受限，请等待分析完成</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center gap-4 bg-white/50 p-4 rounded-3xl border border-stone-100 card-shadow mx-4">
         <div className="relative">
           <div className="absolute inset-0 bg-accent/20 blur-lg rounded-full" />
@@ -720,8 +766,12 @@ const ProfileTab = ({ currentUser, onSelectReport }: { currentUser: any; onSelec
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-2xl p-4 border border-stone-200 card-shadow hover:shadow-md transition-all duration-300 cursor-pointer"
+                  className={`bg-white rounded-2xl p-4 border border-stone-200 card-shadow transition-all duration-300 ${isAnalysisInProgress ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}`}
                   onClick={() => {
+                    if (isAnalysisInProgress) {
+                      alert('正在分析中，请等待当前分析完成后再查看历史记录');
+                      return;
+                    }
                     onSelectReport(reportData, imageUrl || '');
                   }}
                 >
@@ -784,6 +834,7 @@ const AppContent = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [thinkingStep, setThinkingStep] = useState(0);
   const [report, setReport] = useState<AnalysisReport | null>(null);
+  const [isAnalysisInProgress, setIsAnalysisInProgress] = useState(false); // 新增：跟踪分析过程状态
   
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -794,6 +845,8 @@ const AppContent = () => {
   const navigate = useNavigate();
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSavingImage, setIsSavingImage] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const thinkingSteps = [
     "正在扫描户型轮廓...",
@@ -917,6 +970,7 @@ const AppContent = () => {
         
         // 直接进行分析，跳过图片验证步骤
         setIsAnalyzing(true);
+        setIsAnalysisInProgress(true); // 新增：标记分析进行中
         setThinkingStep(0);
         setActiveTab('report');
         
@@ -925,6 +979,7 @@ const AppContent = () => {
         } catch (err: any) {
           console.error('分析过程出错:', err);
           setIsAnalyzing(false);
+          setIsAnalysisInProgress(false); // 新增：清理分析状态
           setError(err.message || '分析过程中出现错误，请重试。');
         }
       };
@@ -962,6 +1017,9 @@ const AppContent = () => {
         setTimeout(() => {
           triggerSuggestionImages(result.parsedResult);
         }, 1000);
+        
+        // 新增：分析完成后清理状态
+        setIsAnalysisInProgress(false);
       } else {
         throw new Error("未能生成分析报告");
       }
@@ -975,6 +1033,12 @@ const AppContent = () => {
 
   // 处理选择报告的回调
   const handleSelectReport = (report: AnalysisReport | null, image: string) => {
+    // 新增：如果正在分析中，不允许查看历史记录详情
+    if (isAnalysisInProgress) {
+      alert('正在分析中，请等待当前分析完成后再查看历史记录');
+      return;
+    }
+    
     // 添加空值检查
     if (!report || !report.points) {
       console.warn('无效的报告数据，跳过图像生成');
@@ -993,6 +1057,58 @@ const AppContent = () => {
     triggerSuggestionImages(report);
   };
   
+  // 保存报告为图片
+  const saveReportAsImage = async () => {
+    if (!reportRef.current || !report) return;
+    
+    setIsSavingImage(true);
+    try {
+      // 使用 html2canvas-pro 截取整个报告区域
+      const canvas = await html2canvas(reportRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2, // 提高图片质量
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: reportRef.current.scrollWidth,
+        height: reportRef.current.scrollHeight,
+        onclone: (clonedDoc) => {
+          // 确保所有内容都被正确渲染
+          const clonedElement = clonedDoc.getElementById('report-container');
+          if (clonedElement) {
+            clonedElement.style.overflow = 'visible';
+          }
+        }
+      });
+      
+      // 将 canvas 转换为 Blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+        }, 'image/png', 1.0);
+      });
+      
+      // 创建下载链接
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `户型分析报告_${new Date().getTime()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      // 显示成功提示
+      alert('报告已成功保存为图片！');
+      
+    } catch (error) {
+      console.error('保存图片失败:', error);
+      alert('保存图片时出现错误，请重试');
+    } finally {
+      setIsSavingImage(false);
+    }
+  };
+
   // 批量触发建议图像生成（优化版：智能并发控制和限流处理）
   const triggerSuggestionImages = async (analysisReport: AnalysisReport | null) => {
     try {
@@ -1494,7 +1610,7 @@ const AppContent = () => {
                   </div>
                 </div>
               ) : (
-                <motion.div>
+                <motion.div ref={reportRef} id="report-container">
                   {!report ? (
                     <div className="h-64 flex flex-col items-center justify-center text-stone-400">
                       <FileText className="w-12 h-12 opacity-20 mb-4" />
@@ -1527,7 +1643,7 @@ const AppContent = () => {
                       </section>
 
                       {/* Report Summary */}
-                      <div className="bg-white rounded-2xl p-6 border-l-4 border-accent card-shadow">
+                      <div className="overall-summary-card bg-white rounded-2xl p-6 border-l-4 border-accent card-shadow mb-6">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">总体评价</span>
                           <div className="flex items-center gap-1">
@@ -1541,7 +1657,7 @@ const AppContent = () => {
                       </div>
 
                       {/* Analysis Points */}
-                      <div className="space-y-2">
+                      <div className="space-y-14">
                         {report.points.map((point, idx) => (
                           <AnalysisCard key={idx} point={point} />
                         ))}
@@ -1554,15 +1670,33 @@ const AppContent = () => {
                           {report.conclusion}
                         </p>
                       </div>
+
+                      {/* Save as Image Button */}
+                      <div className="pt-4">
+                        <button
+                          onClick={saveReportAsImage}
+                          disabled={isSavingImage}
+                          className="w-full px-8 py-3 bg-primary text-white rounded-xl font-bold shadow-lg hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSavingImage ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span>正在保存...</span>
+                            </>
+                          ) : (
+                            <span>保存为图片</span>
+                          )}
+                        </button>
+                      </div>
                     </>
                   )}
                 </motion.div>
               )}
             </motion.div>
           ) : activeTab === 'sim' ? (
-            <OptimizationTab report={report} currentUser={currentUser} onUpgrade={handlePremiumUpgrade} />
+            <OptimizationTab report={report} currentUser={currentUser} onUpgrade={handlePremiumUpgrade} isAnalyzing={isAnalyzing} thinkingStep={thinkingStep} />
           ) : activeTab === 'me' ? (
-            <ProfileTab currentUser={currentUser} onSelectReport={handleSelectReport} />
+            <ProfileTab currentUser={currentUser} onSelectReport={handleSelectReport} isAnalysisInProgress={isAnalysisInProgress} />
           ) : null}
         </AnimatePresence>
       </main>

@@ -75,6 +75,11 @@ body {
   background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
 }
 
+/* 增加总体评价与分析模块之间的间距 */
+.overall-summary-card + .report-card {
+  margin-top: 48px;
+}
+
 .suggestion-item {
   @apply flex gap-2 text-xs text-stone-600 leading-relaxed py-1;
 }
