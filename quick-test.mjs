@@ -1,87 +1,67 @@
-#!/usr/bin/env node
-/**
- * 快速测试脚本 - 验证 Qwen 3.5 Plus 基础连接
- * 使用正确的官方标准格式
- */
+import fetch from 'node-fetch';
 
-import fs from 'fs/promises';
-
-async function quickTest() {
-  console.log('⚡ 快速测试开始...');
+// 测试非户型图（应该被预判别拒绝）
+const testNonFloorPlan = async () => {
+  console.log('🔍 测试非户型图预判别...');
   
-  // 读取 API 密钥
-  let apiKey = process.env.VITE_QWEN_API_KEY;
-  
-  if (!apiKey) {
-    try {
-      const envContent = await fs.readFile('.env.local', 'utf8');
-      const lines = envContent.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('VITE_QWEN_API_KEY=')) {
-          apiKey = trimmed.split('=')[1].replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
-          break;
-        }
-      }
-    } catch (e) {}
-  }
-
-  if (!apiKey) {
-    console.error('❌ 错误：未找到 API 密钥');
-    console.log('请在 .env.local 中添加：VITE_QWEN_API_KEY=your_api_key_here');
-    return;
-  }
-
-  console.log('✅ API 密钥已加载');
-
-  // 使用正确的官方标准端点
-  const testUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+  // 使用一个明显不是户型图的图片（这里是1x1像素的透明PNG）
+  const nonFloorPlanImage = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
   
   try {
-    const response = await fetch(testUrl, {
+    const response = await fetch('http://localhost:3001/api/analyze', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "qwen-plus", // 注意：使用 qwen-plus 而不是 qwen3.5-plus
-        messages: [{
-          role: "user",
-          content: "你好"
-        }],
-        temperature: 0.7,
-        top_p: 0.9,
-        max_tokens: 100
+        imageBase64: nonFloorPlanImage,
+        userId: 'test-user',
+        userSessionId: 'test-session'
       })
     });
-
-    console.log(`状态码: ${response.status}`);
-    console.log(`状态文本: ${response.statusText}`);
     
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ 连接成功！');
-      console.log('响应数据:', JSON.stringify(data, null, 2).substring(0, 200) + '...');
+    const result = await response.json();
+    console.log('状态码:', response.status);
+    console.log('响应:', JSON.stringify(result, null, 2));
+    
+    if (response.status === 400 && result.error === '图片类型不匹配') {
+      console.log('✅ 预判别功能正常工作！');
     } else {
-      const errorText = await response.text();
-      console.error('❌ 请求失败:', errorText);
-      
-      // 提供具体解决方案
-      console.log('\n🔧 建议解决方案:');
-      console.log('1. 检查 DashScope 控制台中 Qwen 3.5 Plus 模型是否已开通');
-      console.log('2. 确认 API 密钥有调用权限');
-      console.log('3. 尝试在 DashScope 控制台直接测试该模型');
-      console.log('4. 如果仍然失败，请提供确切的模型名称');
+      console.log('❌ 预判别功能未按预期工作');
     }
   } catch (error) {
-    console.error('❌ 网络错误:', error.message);
-    console.log('\n💡 请检查:');
-    console.log('- 网络连接是否正常');
-    console.log('- 防火墙是否阻止了请求');
-    console.log('- 是否需要代理')
+    console.error('测试失败:', error.message);
   }
-}
+};
+
+// 测试户型图（应该通过预判别）
+const testValidFloorPlan = async () => {
+  console.log('\n🔍 测试有效户型图...');
+  
+  // 使用一个假设是户型图的图片
+  const floorPlanImage = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+  
+  try {
+    const response = await fetch('http://localhost:3001/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        imageBase64: floorPlanImage,
+        userId: 'test-user',
+        userSessionId: 'test-session'
+      })
+    });
+    
+    const result = await response.json();
+    console.log('状态码:', response.status);
+    console.log('响应:', JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error('测试失败:', error.message);
+  }
+};
 
 // 运行测试
-quickTest().catch(console.error);
+await testNonFloorPlan();
+// await testValidFloorPlan(); // 可选：测试有效户型图

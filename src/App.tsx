@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
+import { motion } from 'motion/react';
 import { loadStripe } from '@stripe/stripe-js';
 import { 
   Upload, 
@@ -31,7 +32,7 @@ import {
   Crown,
   Camera
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -87,11 +88,31 @@ async function callDoubaoAPI(prompt: string, imageBase64?: string, userId?: stri
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`Analysis API error: ${response.status} ${response.statusText}`);
+  let data: any;
+  try {
+    data = await response.json();
+  } catch (jsonError) {
+    // JSON解析失败时，使用原始响应文本作为错误信息
+    const errorMessage = await response.text();
+    throw new Error(`JSON解析失败: ${errorMessage}`);
   }
-
-  const data = await response.json();
+  
+  // 如果响应不成功，抛出包含详细信息的错误
+  if (!response.ok || !data.success) {
+    // 优先使用error字段作为错误消息，这样可以正确触发弹窗
+    const error = new Error(data.error || data.message || `Analysis API error: ${response.status} ${response.statusText}`);
+    // 添加详细信息到错误对象
+    (error as any).detail = data.detail || data.message || '';
+    (error as any).confidence = data.confidence || 0;
+    (error as any).isFloorPlan = data.isFloorPlan !== undefined ? data.isFloorPlan : 
+      (data.error && data.error.includes('图片类型不匹配')) ? false : undefined;
+    // 确保在任何情况下都能识别图片类型不匹配
+    if ((data.error && data.error.includes('图片类型不匹配')) || 
+        (data.message && data.message.includes('图片类型不匹配'))) {
+      (error as any).isFloorPlan = false;
+    }
+    throw error;
+  }
   return {
     result: data.success ? 'success' : '',
     parsedResult: data.parsedResult || {},
@@ -224,8 +245,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error) {
-    console.error('组件错误:', error);
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('组件错误:', error, errorInfo);
+    // 发送错误报告到监控服务（如果有的话）
+    // 可以在这里添加 Sentry、LogRocket 等错误监控
   }
 
   render() {
@@ -827,6 +850,27 @@ const ProfileTab = ({ currentUser, onSelectReport, isAnalysisInProgress }: { cur
 };
 
 const AppContent = () => {
+  // 弹窗状态管理
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationModalData, setValidationModalData] = useState({
+    title: '',
+    message: '',
+    type: 'info' as 'info' | 'warning' | 'error',
+    onConfirm: () => {}
+  });
+
+  // 弹窗处理函数
+  const handleShowValidationModal = useCallback((title: string, message: string, type: 'info' | 'warning' | 'error' = 'info', onConfirm?: () => void) => {
+    console.log('🔔 触发弹窗显示:', { title, type, message });
+    setValidationModalData({
+      title,
+      message,
+      type,
+      onConfirm: onConfirm || (() => setShowValidationModal(false))
+    });
+    setShowValidationModal(true);
+    console.log('🔔 弹窗状态已设置为显示');
+  }, []);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [image, setImage] = useState<string | null>(null);
@@ -842,6 +886,8 @@ const AppContent = () => {
   const [authForm, setAuthForm] = useState({ email: '', password: '', isSignUp: false });
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('home');
+  
+
   const navigate = useNavigate();
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -959,6 +1005,13 @@ const AppContent = () => {
         return;
       }
 
+      // 基础文件类型检查
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        setError('请上传JPG、PNG或WebP格式的图片');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = async () => {
         const imageData = reader.result as string;
@@ -968,9 +1021,9 @@ const AppContent = () => {
         setReport(null);
         setError(null);
         
-        // 直接进行分析，跳过图片验证步骤
+        // 开始分析流程
         setIsAnalyzing(true);
-        setIsAnalysisInProgress(true); // 新增：标记分析进行中
+        setIsAnalysisInProgress(true);
         setThinkingStep(0);
         setActiveTab('report');
         
@@ -979,8 +1032,85 @@ const AppContent = () => {
         } catch (err: any) {
           console.error('分析过程出错:', err);
           setIsAnalyzing(false);
-          setIsAnalysisInProgress(false); // 新增：清理分析状态
-          setError(err.message || '分析过程中出现错误，请重试。');
+          setIsAnalysisInProgress(false);
+          
+          // 根据错误类型显示不同提示
+          // 兼容多种错误格式：1) err.message包含'图片类型不匹配' 2) err.isFloorPlan为false 3) err.error包含'图片类型不匹配'
+          console.log('🔍 错误对象详情:', { message: err.message, error: err.error, isFloorPlan: err.isFloorPlan, detail: err.detail });
+          const isFloorPlanError = err.message.includes('图片类型不匹配') || 
+            (err.isFloorPlan !== undefined && !err.isFloorPlan) || 
+            (err.error && err.error.includes('图片类型不匹配')) || 
+            (err.detail && err.detail.includes('图片类型不匹配'));
+          if (isFloorPlanError) {
+            // 显示弹窗提示而非简单错误
+            const detail = err.detail || '请上传住宅户型平面图进行分析';
+            const confidence = err.confidence || 0;
+                    
+            let modalTitle = '图片识别提示';
+            let modalMessage = `📥 重新上传户型图'\n ${detail};  
+            let modalType: 'info' | 'warning' | 'error' = 'warning';
+                    
+            if (confidence < 40) {
+              modalTitle = '图片类型不符';
+              modalMessage = `AI检测到这不是住宅户型图（置信度: ${confidence}%）
+
+💡 请上传清晰的住宅户型平面图
+📋 包含：房间布局、墙体标识、门窗位置
+📥 点击确定后可重新上传图片`;
+              modalType = 'error';
+            } else if (confidence < 60) {
+              modalTitle = '图片识别存疑';
+              modalMessage = `AI对图片类型的判断不够确定（置信度: ${confidence}%）
+
+💡 建议上传更清晰的户型图
+📋 确保包含完整的房间布局和墙体结构
+📥 点击确定返回首页重新上传`;
+              modalType = 'warning';
+            }
+                    
+            setValidationModalData({
+              title: modalTitle,
+              message: modalMessage,
+              type: modalType,
+              onConfirm: () => {
+                setShowValidationModal(false);
+                // 点击确定后跳回首页
+                setActiveTab('home');
+              }
+            });
+            setShowValidationModal(true);
+          } else {
+            // 显示弹窗提示而非简单错误
+            const detail = err.detail || '请上传住宅户型平面图进行分析';
+            const confidence = err.confidence || 0;
+                    
+            let modalTitle = '图片识别提示';
+            let modalMessage = `${detail}\n\n📥 点击确定返回首页重新上传户型图`;
+            let modalType: 'info' | 'warning' | 'error' = 'warning';
+                    
+            if (confidence < 40) {
+              modalTitle = '图片类型不符';
+              modalMessage = `AI检测到这不是住宅户型图（置信度: ${confidence}%）
+
+💡 请上传清晰的住宅户型平面图
+📋 包含：房间布局、墙体标识、门窗位置
+📥 点击确定后可重新上传图片`;
+              modalType = 'error';
+            } else if (confidence < 60) {
+              modalTitle = '图片识别存疑';
+              modalMessage = `AI对图片类型的判断不够确定（置信度: ${confidence}%）
+
+💡 建议上传更清晰的户型图
+📋 确保包含完整的房间布局和墙体结构
+📥 点击确定返回首页重新上传`;
+              modalType = 'warning';
+            }
+                    
+            handleShowValidationModal(modalTitle, modalMessage, modalType, () => {
+              // 点击确定后跳回首页
+              setActiveTab('home');
+            });
+          }
         }
       };
       reader.readAsDataURL(file);
@@ -1025,7 +1155,8 @@ const AppContent = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "分析过程中出现错误，请重试。");
+      // 重新抛出错误，让外层处理弹窗逻辑
+      throw err;
     } finally {
       setIsAnalyzing(false);
     }
@@ -1324,6 +1455,8 @@ const AppContent = () => {
                 </div>
               </header>
 
+
+              
               {/* Upload Pill Button */}
               <section>
                 <button
@@ -1337,7 +1470,7 @@ const AppContent = () => {
                     </div>
                     <div className="text-left">
                       <span className="text-xl font-bold text-white block">上传户型图</span>
-                      <span className="text-xs text-white/60">支持 JPG, PNG, WEBP</span>
+                      <span className="text-xs text-white/60">住宅平面图，支持 JPG/PNG/WebP</span>
                     </div>
                   </div>
                   <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
@@ -1719,6 +1852,18 @@ const AppContent = () => {
         }}
         currentUser={currentUser}
       />
+      
+      {/* Validation Modal - 图片类型验证弹窗 */}
+      <ValidationModal
+        isOpen={showValidationModal}
+        onClose={() => {
+          setShowValidationModal(false);
+          validationModalData.onConfirm();
+        }}
+        title={validationModalData.title}
+        message={validationModalData.message}
+        type={validationModalData.type}
+      />
     </div>
   );
 };
@@ -1764,6 +1909,63 @@ function NavButton({ active, icon, label, onClick }: { active: boolean; icon: Re
 }
 
 // 根组件（包裹错误边界）
+// 弹窗组件
+const ValidationModal = ({ isOpen, onClose, title, message, type }: { isOpen: boolean; onClose: () => void; title: string; message: string; type: 'info' | 'warning' | 'error' }) => {
+  const modalColors = {
+    info: 'bg-blue-50 border-blue-200 text-blue-800',
+    warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    error: 'bg-red-50 border-red-200 text-red-800'
+  };
+  
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${modalColors[type]}`}>
+                {type === 'error' && <AlertCircle className="w-5 h-5" />}
+                {type === 'warning' && <Info className="w-5 h-5" />}
+                {type === 'info' && <CheckCircle2 className="w-5 h-5" />}
+              </div>
+              <h3 className="text-xl font-bold text-stone-800">{title}</h3>
+            </div>
+            
+            <div className="text-stone-600 space-y-3 mb-6">
+              <p>{message.split('\n').map((line, i) => (
+                <React.Fragment key={i}>
+                  {line}<br />
+                </React.Fragment>
+              ))}</p>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border border-stone-200 rounded-lg text-stone-700 hover:bg-stone-50 transition-colors"
+              >
+                确认
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
     <AppContent />
