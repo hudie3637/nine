@@ -72,7 +72,7 @@ async function callDoubaoAPI(prompt: string, imageBase64?: string, userId?: stri
     throw new Error('DOUBAO_API_KEY is not configured');
   }
 
-  const response = await fetch('/api/analyze', {
+  const response = await fetch('https://fengshui-backend-4i5o.onrender.com/analyze', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -116,7 +116,7 @@ async function callDoubaoImageAPI(description: string) {
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch('/api/generate-image', {
+    const response = await fetch('https://fengshui-backend-4i5o.onrender.com/generate-image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -25,16 +25,31 @@ import analyzeHandler, { getHistoryRecords } from './src/api/analyze.ts';
 import generateImageHandler from './src/api/generate-image.ts';
 
 
-// 原有接口
+// 原有接口（同时支持带和不带/api前缀的路由）
 app.post('/api/analyze', analyzeHandler);
+app.post('/analyze', analyzeHandler);
 app.post('/api/generate-image', generateImageHandler);
+app.post('/generate-image', generateImageHandler);
 
 
 // ========== 新增：历史记录查询接口 ==========
 app.get('/api/analysis-history', getHistoryRecords);
+app.get('/analysis-history', getHistoryRecords);
 
 // ========== 新增：健康检查接口（可选，方便调试） ==========
 app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    env: {
+      SUPABASE_URL: (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) ? '配置完成' : '未配置',
+      SUPABASE_ANON_KEY: (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY) ? '配置完成' : '未配置',
+      QWEN_API_KEY: process.env.QWEN_API_KEY ? '配置完成' : '未配置'
+    }
+  });
+});
+app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
