@@ -67,12 +67,13 @@ function debounce<T extends (...args: any[]) => Promise<any>>(
 // ========== API 调用函数 ==========
 async function callDoubaoAPI(prompt: string, imageBase64?: string, userId?: string) {
   const apiKey = import.meta.env.VITE_DOUBAO_API_KEY || '';
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://fengshui-backend-4i5o.onrender.com';
   
   if (!apiKey) {
     throw new Error('DOUBAO_API_KEY is not configured');
   }
 
-  const response = await fetch('https://fengshui-backend-4i5o.onrender.com/analyze', {
+  const response = await fetch(`${apiBaseUrl}/analyze`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -116,7 +117,8 @@ async function callDoubaoImageAPI(description: string) {
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch('https://fengshui-backend-4i5o.onrender.com/generate-image', {
+    const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://fengshui-backend-4i5o.onrender.com';
+    const response = await fetch(`${apiBaseUrl}/generate-image`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
