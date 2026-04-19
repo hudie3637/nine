@@ -1,12 +1,24 @@
-# 九衡居 - 智能建筑风水分析平台
+```
+
+```
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" alt="九衡居 Banner" width="1200" />
+  <img src="./public/logo.png" alt="九衡居" width="400" />
 </div>
+
+# 九衡居 - 智能建筑风水分析平台
 
 ## 📖 项目简介
 
 **九衡居**是一款融合传统风水五行与现代环境心理学的智能建筑分析平台。通过AI技术，用户可以上传户型图，获得专业的风水分析报告和优化建议。
+
+### 🌐 在线访问
+
+- **演示地址**: https://fengshui-frontend-ganp.onrender.com
+
+###  演示效果
+
+![户型分析报告演示](./public/screenshot.png)
 
 ### ✨ 核心特色
 
@@ -20,6 +32,7 @@
 ## 🚀 技术栈
 
 ### 前端
+
 - **React 19** - 现代化UI框架
 - **TypeScript** - 类型安全的开发体验
 - **Vite 6** - 快速的开发构建工具
@@ -28,35 +41,41 @@
 - **React Router** - 页面路由管理
 
 ### 后端
+
 - **Express** - Node.js Web框架
 - **Supabase** - 后端即服务平台（数据库 + 认证）
 - **Stripe** - 支付处理
 
 ### AI 服务
+
 - **豆包 AI (Doubao)** - 户型图分析与图像生成
 - **通义千问 (Qwen)** - 文本分析处理
 
 ## 📋 功能模块
 
 ### 1. 户型分析
+
 - 支持 JPG/PNG/WebP 格式图片上传
 - AI自动识别户型结构和空间分区
 - 九宫八卦方位测算
 - 五行能量流转分析
 
 ### 2. 风水解读
+
 - 整体评分（1-100分）
 - 空间布局优化建议
 - 五行元素平衡分析
 - 化解方案推荐
 
 ### 3. 环境心理学
+
 - 动线设计评估
 - 采光通风分析
 - 空间功能分区建议
 - 居住舒适度提升
 
 ### 4. 用户系统
+
 - Supabase 邮箱注册登录
 - 分析历史记录
 - 个人数据云端同步
@@ -72,12 +91,14 @@
 ### 安装步骤
 
 1. **克隆项目**
+
 ```bash
 git clone <repository-url>
 cd 建筑风水
 ```
 
 2. **安装依赖**
+
 ```bash
 npm install
 ```
@@ -105,6 +126,7 @@ VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_key
 ```
 
 4. **启动开发服务器**
+
 ```bash
 npm run dev
 ```
@@ -141,7 +163,7 @@ npm run dev
 └── server.ts             # Express服务器
 ```
 
-##  部署指南
+## 部署指南
 
 ### Vercel 部署
 
@@ -154,13 +176,13 @@ npm run dev
 
 ### 环境变量清单
 
-| 变量名 | 说明 | 是否必填 |
-|--------|------|---------|
-| VITE_DOUBAO_API_KEY | 豆包AI API密钥 | ✅ 是 |
-| VITE_SUPABASE_URL | Supabase项目URL | ❌ 否 |
-| VITE_SUPABASE_ANON_KEY | Supabase匿名密钥 | ❌ 否 |
-| VITE_STRIPE_PUBLISHABLE_KEY | Stripe公钥 | ❌ 否 |
-| STRIPE_SECRET_KEY | Stripe私钥 | ❌ 否 |
+| 变量名                      | 说明             | 是否必填 |
+| --------------------------- | ---------------- | -------- |
+| VITE_DOUBAO_API_KEY         | 豆包AI API密钥   | ✅ 是    |
+| VITE_SUPABASE_URL           | Supabase项目URL  | ❌ 否    |
+| VITE_SUPABASE_ANON_KEY      | Supabase匿名密钥 | ❌ 否    |
+| VITE_STRIPE_PUBLISHABLE_KEY | Stripe公钥       | ❌ 否    |
+| STRIPE_SECRET_KEY           | Stripe私钥       | ❌ 否    |
 
 ## 📚 文档
 
@@ -188,7 +210,7 @@ npm run preview
 npm run lint
 ```
 
-##  使用流程
+## 使用流程
 
 1. **访问网站** - 打开应用首页
 2. **上传户型图** - 点击上传按钮选择户型图片
@@ -200,15 +222,16 @@ npm run lint
 ## ⚠️ 注意事项
 
 1. **图片要求**
+
    - 格式：JPG/PNG/WebP
    - 大小：不超过10MB
    - 内容：清晰的户型图或平面图
-
 2. **API限制**
+
    - 豆包AI API有调用频率限制
    - 图片生成需要较长时间（约30秒）
-
 3. **数据安全**
+
    - 用户数据通过Supabase加密存储
    - RLS策略确保数据隔离
    - 支持用户自主删除数据
