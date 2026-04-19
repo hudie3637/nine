@@ -1,12 +1,8 @@
-```
-
-```
+# 九衡居 - 智能建筑风水分析平台
 
 <div align="center">
   <img src="./public/logo.png" alt="九衡居" width="400" />
 </div>
-
-# 九衡居 - 智能建筑风水分析平台
 
 ## 📖 项目简介
 
@@ -16,9 +12,9 @@
 
 - **演示地址**: https://fengshui-frontend-ganp.onrender.com
 
-###  演示效果
+### 演示效果
 
-![户型分析报告演示](./public/screenshot.png)
+<img src="./public/screenshot.png" alt="户型分析报告演示" width="50%" />
 
 ### ✨ 核心特色
 
